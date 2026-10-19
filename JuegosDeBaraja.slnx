@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="API/API.csproj" />
+  <Project Path="Baraja/Baraja.csproj" />
+  <Project Path="Consola/Consola.csproj" Id="67f4ee95-bfbf-4b20-8bed-dd095b4c707a" />
+  <Project Path="WinFormsUI/WinFormsUI.csproj" />
+</Solution>
