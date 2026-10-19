@@ -54,4 +54,8 @@ public class StandardDealer : IDealer
 
         return Result<List<Card>>.Success(dealtCards);
     }
+    public void Return(Card card)
+    {
+        _drawPile.Push(card);
+    }
 }

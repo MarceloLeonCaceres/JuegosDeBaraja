@@ -6,5 +6,6 @@ public interface IDealer
     void ResetAndShuffle();
     Result<Card> Deal();
     Result<List<Card>> DealMany(int count);
+    void Return(Card card);
 }
 

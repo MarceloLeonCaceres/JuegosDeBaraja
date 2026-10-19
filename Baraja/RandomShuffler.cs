@@ -6,6 +6,11 @@ public class RandomShuffler : IShuffler
 {
     private readonly Random _random = new();
 
+    public RandomShuffler(int seed)
+    {
+        _random = new Random(seed);
+    }
+
     public void Shuffle(IList<Card> cards)
     {
         int n = cards.Count;
@@ -13,7 +18,7 @@ public class RandomShuffler : IShuffler
         {
             n--;
             int k = _random.Next(n + 1);
-            (cards[n], cards[k]) = (cards[k], cards[n]); // Tuple swap (C# 7+)
+            (cards[n], cards[k]) = (cards[k], cards[n]);
         }
     }
 }

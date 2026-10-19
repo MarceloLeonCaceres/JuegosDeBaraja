@@ -59,7 +59,7 @@ public class MoveCardsCommand(
 public class GameManager
 {
     private readonly Stack<IMoveCommand> _history = new();
-
+    public int MoveCount => _history.Count;
     public Result<bool> TryExecuteMove(IMoveCommand command)
     {
         var result = command.Execute();

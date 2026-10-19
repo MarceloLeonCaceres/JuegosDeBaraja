@@ -2,6 +2,7 @@ using Baraja;
 using Baraja.Commands;
 using Baraja.Implementaciones;
 using Baraja.Implementaciones.Spider;
+using Baraja.Interfaces;
 
 namespace WinFormsUI;
 
@@ -9,6 +10,7 @@ public partial class SpiderForm : Form
 {
     private SpiderGameTable _gameTable;
     private GameManager _gameManager;
+    private IDealer _dealer;
 
     // Puente entre la UI y el motor
     private readonly Dictionary<PictureBox, PlayableCard> _pbToCard = new();
@@ -40,6 +42,16 @@ public partial class SpiderForm : Form
                                                             
     // Bloquea la UI mientras hay cartas volando
     private bool _isAnimating = false;
+    private GameDifficulty _currentDifficulty = GameDifficulty.Easy;
+    private int _currentSeed;
+
+    // Barra de estado para mostrar movimientos y tiempo
+    private StatusStrip _statusStrip;
+    private ToolStripStatusLabel _lblMoves;
+    private ToolStripStatusLabel _lblTime;
+    // Cronómetro
+    private System.Windows.Forms.Timer _gameTimer;
+    private int _elapsedSeconds;
     public SpiderForm()
     {
         InitializeComponent();
@@ -58,19 +70,11 @@ public partial class SpiderForm : Form
         // 3. Suscribir evento de cambio de tamaño
         this.SizeChanged += SpiderForm_SizeChanged;
 
-        StartNewGame();
-    }
-    private void StartNewGame()
-    {
-        var deck = SpiderDeckFactory.CreateOneSuit();
-        var dealer = new StandardDealer(deck, new RandomShuffler());
+        InitializeMenu();
+        InitializeStatusBar();
 
-        _gameTable = new SpiderGameTable(dealer);
-        _gameTable.DealInitialBoard();
-        _gameManager = new GameManager();
-
-        CalculateDimensions();
-        RenderBoard();
+        // Empezar por defecto en Fácil
+        StartBrandNewGame(GameDifficulty.Easy);
     }
     private void Form1_Load(object sender, EventArgs e)
     {
@@ -212,6 +216,7 @@ public partial class SpiderForm : Form
                 CheckAndAnimateCompletedSuits(() =>
                 {
                     RenderBoard(); // Redibujar tras sacar el palo completado
+                    UpdateStatusBar(); // Actualizar movimientos si hubo un intento
                     CheckForVictory();
                 });
 
@@ -314,7 +319,8 @@ public partial class SpiderForm : Form
     {
         if (_isAnimating || _gameTable.IsGameWon) return;
 
-        var result = _gameTable.DealFromStock();
+        var dealCommand = new SpiderDealCommand(_gameTable, _dealer);
+        var result = _gameManager.TryExecuteMove(dealCommand);
 
         if (result.IsSuccess)
         {
@@ -368,6 +374,7 @@ public partial class SpiderForm : Form
                 CheckAndAnimateCompletedSuits(() =>
                 {
                     RenderBoard();
+                    UpdateStatusBar();
                     CheckForVictory();
                 });
             });
@@ -478,6 +485,7 @@ public partial class SpiderForm : Form
 
             // 2. La UI simplemente se sincroniza con el estado actual del núcleo
             RenderBoard();
+            UpdateStatusBar();
         }
     }
     private void RenderFoundations()
@@ -532,6 +540,7 @@ public partial class SpiderForm : Form
         // Consultamos al motor si las 8 fundaciones están llenas
         if (_gameTable.IsGameWon)
         {
+            _gameTimer.Stop(); // Detenemos el cronómetro al ganar
             // Mostramos el mensaje y capturamos la respuesta
             var result = MessageBox.Show(
                 "¡Felicidades! Has completado todos los palos y ganado el juego de Spider Solitaire.\n\n¿Quieres jugar una nueva partida?",
@@ -543,7 +552,7 @@ public partial class SpiderForm : Form
             if (result == DialogResult.Yes)
             {
                 // Reutilizamos el método que ya tienes para limpiar y crear una mesa nueva
-                StartNewGame();
+                StartBrandNewGame(_currentDifficulty);
             }
         }
     }
@@ -645,7 +654,7 @@ public partial class SpiderForm : Form
         ColumnSpacing = (int)(90 * scale);
 
         StockStartX = (int)(50 * scale);
-        StockStartY = (int)(30 * scale);
+        StockStartY = (int)(50 * scale);
 
         BoardStartX = (int)(50 * scale);
 
@@ -663,5 +672,148 @@ public partial class SpiderForm : Form
             CalculateDimensions();
             RenderBoard();
         }
+    }
+    private void InitializeMenu()
+    {
+        var menuStrip = new MenuStrip();
+        var gameMenu = new ToolStripMenuItem("Juego");
+
+        var restartMenuItem = new ToolStripMenuItem("Reiniciar Partida (Misma Baraja)");
+        restartMenuItem.Click += (s, e) => {
+            if (ConfirmRestart()) StartGameWithSeed(_currentDifficulty, _currentSeed);
+        };
+
+        var newGameMenu = new ToolStripMenuItem("Nuevo Juego...");
+
+        var easyMenu = new ToolStripMenuItem("Fácil (1 Palo - Picas)");
+        easyMenu.Click += (s, e) =>
+        {
+            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Easy);
+        };
+
+        var mediumMenu = new ToolStripMenuItem("Medio (2 Palos - Picas y Corazones)");
+        mediumMenu.Click += (s, e) =>
+        {
+            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Medium);
+        };
+
+        var hardMenu = new ToolStripMenuItem("Difícil (4 Palos)");
+        hardMenu.Click += (s, e) =>
+        {
+            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Hard);
+        };
+
+        newGameMenu.DropDownItems.Add(easyMenu);
+        newGameMenu.DropDownItems.Add(mediumMenu);
+        newGameMenu.DropDownItems.Add(hardMenu);
+
+        gameMenu.DropDownItems.Add(newGameMenu);
+        gameMenu.DropDownItems.Add(new ToolStripSeparator());
+        gameMenu.DropDownItems.Add(restartMenuItem);
+
+        menuStrip.Items.Add(gameMenu);
+
+        this.MainMenuStrip = menuStrip;
+        this.Controls.Add(menuStrip);
+    }
+    private void StartBrandNewGame(GameDifficulty difficulty)
+    {
+        // Generar una nueva semilla aleatoria basada en el reloj del sistema
+        int newSeed = Environment.TickCount;
+        StartGameWithSeed(difficulty, newSeed);
+    }
+
+    private void StartGameWithSeed(GameDifficulty difficulty, int seed)
+    {
+        _currentDifficulty = difficulty;
+        _currentSeed = seed;
+
+        // 1. Seleccionar la fábrica correcta según la dificultad
+        IDeck deck = difficulty switch
+        {
+            GameDifficulty.Easy => SpiderDeckFactory.CreateOneSuit(),
+            GameDifficulty.Medium => SpiderDeckFactory.CreateTwoSuits(),
+            GameDifficulty.Hard => SpiderDeckFactory.CreateFourSuits(),
+            _ => SpiderDeckFactory.CreateOneSuit()
+        };
+
+        // 2. Usar el shuffler con la semilla guardada para asegurar el mismo orden
+        var shuffler = new RandomShuffler(seed);
+        _dealer = new StandardDealer(deck, shuffler);
+
+        _gameTable = new SpiderGameTable(_dealer);
+        _gameTable.DealInitialBoard();
+        _gameManager = new GameManager();
+
+        // 3. Forzar detención de animaciones previas si el usuario reinició rápido
+        _isAnimating = false;
+
+        CalculateDimensions();
+        RenderBoard();
+
+        _elapsedSeconds = 0;
+        _lblTime.Text = "Tiempo: 00:00";
+        UpdateStatusBar();
+        _gameTimer.Start();
+    }
+    private bool ConfirmRestart()
+    {
+        // Si el juego aún no ha cargado o ya se ganó, no hay progreso que perder
+        if (_gameTable == null || _gameTable.IsGameWon)
+        {
+            return true;
+        }
+
+        var result = MessageBox.Show(
+            "¿Estás seguro que deseas reiniciar? Perderás tu progreso actual.",
+            "Confirmar reinicio",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question,
+            MessageBoxDefaultButton.Button2 // El botón 'No' por defecto para evitar clics accidentales
+        );
+
+        return result == DialogResult.Yes;
+    }
+    private void InitializeStatusBar()
+    {
+        _statusStrip = new StatusStrip();
+        _statusStrip.BackColor = Color.WhiteSmoke;
+
+        _lblMoves = new ToolStripStatusLabel("Movimientos: 0");
+        _lblMoves.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+        // Este control invisible actúa como un "resorte" para empujar el tiempo a la derecha
+        var springLabel = new ToolStripStatusLabel { Spring = true };
+
+        _lblTime = new ToolStripStatusLabel("Tiempo: 00:00");
+        _lblTime.Font = new Font("Segoe UI", 10, FontStyle.Bold);
+
+        _statusStrip.Items.Add(_lblMoves);
+        _statusStrip.Items.Add(springLabel);
+        _statusStrip.Items.Add(_lblTime);
+
+        this.Controls.Add(_statusStrip);
+
+        // Configurar el reloj (1000 ms = 1 segundo)
+        _gameTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+        _gameTimer.Tick += GameTimer_Tick;
+    }
+
+    private void GameTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_gameTable == null || _gameTable.IsGameWon) return;
+
+        _elapsedSeconds++;
+
+        // Dar formato MM:SS al tiempo
+        TimeSpan time = TimeSpan.FromSeconds(_elapsedSeconds);
+        _lblTime.Text = $"Tiempo: {time:mm\\:ss}";
+    }
+
+    // Método de ayuda para sincronizar el texto con el motor
+    private void UpdateStatusBar()
+    {
+        int moves = _gameManager?.MoveCount ?? 0;
+        _lblMoves.Text = $"Movimientos: {moves}";
     }
 }

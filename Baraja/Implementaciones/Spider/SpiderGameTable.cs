@@ -61,48 +61,6 @@ public class SpiderGameTable
     }
 
     /// <summary>
-    /// Ejecuta la acción de hacer clic en el mazo de robo.
-    /// Reparte exactamente 1 carta descubierta a cada columna.
-    /// </summary>
-    public Result<bool> DealFromStock()
-    {
-        // Regla 1: Validar que ninguna columna esté vacía
-        bool hasEmptyColumns = Columns.Any(c => c.Cards.Count == 0);
-        if (hasEmptyColumns)
-        {
-            return Result<bool>.Failure("No puedes robar del mazo si hay columnas vacías. Mueve alguna carta para llenar el espacio primero.");
-        }
-
-        // Regla 2: Validar que el mazo tenga al menos 10 cartas
-        if (_dealer.RemainingCards < Columns.Count)
-        {
-            return Result<bool>.Failure($"No hay suficientes cartas en el mazo. Quedan {_dealer.RemainingCards}.");
-        }
-
-        // Repartir 1 carta a cada columna
-        var cardsDealtForUndo = new List<PlayableCard>(); // Útil si luego conectamos el Command de Undo
-
-        foreach (var column in Columns)
-        {
-            var dealResult = _dealer.Deal();
-            if (dealResult.IsSuccess && dealResult.Value != null)
-            {
-                // La carta cae boca arriba sobre las demás
-                var newCard = new PlayableCard(dealResult.Value, IsFaceUp: true);
-                column.Push([newCard]); // C# 12 Collection expression
-
-                cardsDealtForUndo.Add(newCard);
-            }
-            else
-            {
-                return Result<bool>.Failure("Error crítico al procesar el mazo de robo.");
-            }
-        }
-
-        return Result<bool>.Success(true);
-    }
-
-    /// <summary>
     /// Escanea el tablero, mueve los palos completos a las fundaciones 
     /// y voltea la carta que queda expuesta.
     /// </summary>
