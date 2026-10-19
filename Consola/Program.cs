@@ -2,4 +2,4 @@
 
 Console.WriteLine("Hello, World!");
 
-CardImageGenerator.GenerateDeck();
+CardImageGenerator.DeckGenerator.GenerateDeck();

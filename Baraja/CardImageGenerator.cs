@@ -3,15 +3,15 @@ using System.Drawing.Drawing2D;
 
 namespace Baraja;
 
-public static class CardImageGenerator
+public static partial class CardImageGenerator
 {
     public static void GenerateDeck(string outputFolder = "CartasGeneradas")
     {
         Directory.CreateDirectory(outputFolder);
 
         // Tamaño clásico (puedes multiplicarlo x2 para HD)
-        int width = 71;
-        int height = 96;
+        int width = 142;
+        int height = 192;
 
         string[] suits = { "Hearts", "Spades", "Clubs", "Diamonds" };
         string[] ranks = { "Ace", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King" };

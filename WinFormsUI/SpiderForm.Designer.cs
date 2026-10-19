@@ -32,10 +32,11 @@ partial class SpiderForm
         // 
         // SpiderForm
         // 
-        AutoScaleDimensions = new SizeF(7F, 15F);
+        AutoScaleDimensions = new SizeF(8F, 20F);
         AutoScaleMode = AutoScaleMode.Font;
-        BackColor = Color.ForestGreen;
-        ClientSize = new Size(1342, 552);
+        BackColor = Color.DarkOliveGreen;
+        ClientSize = new Size(1534, 736);
+        Margin = new Padding(3, 4, 3, 4);
         Name = "SpiderForm";
         Text = "Form1";
         Load += Form1_Load;

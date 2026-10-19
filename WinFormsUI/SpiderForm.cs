@@ -21,45 +21,55 @@ public partial class SpiderForm : Form
     private List<PictureBox> _draggedPbs = new();
     private SpiderTableauColumn _sourceColumn;
     private Point _mouseOffset;
-    private const int StockStartX = 50;
-    private const int StockStartY = 30; // Más arriba que BoardStartY (200)
+    private int StockStartX = 50;
+    private int StockStartY = 30; // Más arriba que BoardStartY (200)
 
-    private const int BoardStartX = 50;
-    private const int BoardStartY = 200;
-    private const int CardWidth = 71;
-    private const int CardHeight = 96;
-    private const int ColumnSpacing = 90;
+    private int BoardStartX;
+    private int BoardStartY;
+    private  int CardWidth;
+    private int CardHeight;
+    private int ColumnSpacing;
     private List<PictureBox> _hoveredPbs = new();
     
     // Controles persistentes de las fundaciones
     private readonly List<PictureBox> _pbFoundations = new();
     // Constantes de diseño para las Fundaciones (Alineadas con el StockPile)
-    private const int FoundationStartX = StockStartX + 200; // Separado del mazo
-    private const int FoundationStartY = StockStartY;
-    private const int FoundationSpacing = CardWidth + 10;   // Espacio entre cada fundación
+    private int FoundationStartX; // Separado del mazo
+    private int FoundationStartY;
+    private int FoundationSpacing;   // Espacio entre cada fundación
                                                             
     // Bloquea la UI mientras hay cartas volando
     private bool _isAnimating = false;
     public SpiderForm()
     {
         InitializeComponent();
+
         // 1. FUNDAMENTAL: Permite que el formulario escuche el teclado a nivel global
         this.KeyPreview = true;
-
-        // 2. Suscribir el evento de teclado
         this.KeyDown += SpiderForm_KeyDown;
+
+        // 1. FUNDAMENTAL: Evita el parpadeo negro al redimensionar WinForms
+        this.DoubleBuffered = true;
+
+        // 2. Tamaño inicial sugerido de la ventana
+        this.MinimumSize = new Size(800, 600);
+        this.Size = new Size(1200, 800); // Esto calculará una escala ~1.2 de inicio
+
+        // 3. Suscribir evento de cambio de tamaño
+        this.SizeChanged += SpiderForm_SizeChanged;
 
         StartNewGame();
     }
     private void StartNewGame()
     {
-        var deck = SpiderDeckFactory.CreateTwoSuits();
+        var deck = SpiderDeckFactory.CreateOneSuit();
         var dealer = new StandardDealer(deck, new RandomShuffler());
 
         _gameTable = new SpiderGameTable(dealer);
         _gameTable.DealInitialBoard();
         _gameManager = new GameManager();
 
+        CalculateDimensions();
         RenderBoard();
     }
     private void Form1_Load(object sender, EventArgs e)
@@ -619,5 +629,39 @@ public partial class SpiderForm : Form
             _gameTable.CheckAndMoveCompletedSuits();
             onAllComplete?.Invoke();
         });
+    }
+    private void CalculateDimensions()
+    {
+        // 1. Calculamos el factor de escala basándonos en el ancho de la ventana
+        // Usamos un ancho base de 1000px como referencia para escala 1.0
+        float scale = this.ClientSize.Width / 1000f;
+
+        // Limitamos la escala para que no sea microscópica ni absurdamente gigante
+        scale = Math.Max(0.6f, Math.Min(3.0f, scale));
+
+        // 2. Aplicamos la escala a todas las medidas del tablero
+        CardWidth = (int)(71 * scale);
+        CardHeight = (int)(96 * scale);
+        ColumnSpacing = (int)(90 * scale);
+
+        StockStartX = (int)(50 * scale);
+        StockStartY = (int)(30 * scale);
+
+        BoardStartX = (int)(50 * scale);
+
+        // Damos más espacio vertical si la carta es más grande
+        BoardStartY = StockStartY + CardHeight + (int)(30 * scale);
+
+        FoundationStartX = StockStartX + (int)(200 * scale);
+        FoundationSpacing = CardWidth + (int)(10 * scale);
+    }
+    private void SpiderForm_SizeChanged(object? sender, EventArgs e)
+    {
+        // Cuando el usuario estira la ventana, recalculamos la matemática y redibujamos
+        if (_gameTable != null)
+        {
+            CalculateDimensions();
+            RenderBoard();
+        }
     }
 }
