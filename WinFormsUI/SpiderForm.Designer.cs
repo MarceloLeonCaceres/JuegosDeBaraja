@@ -38,7 +38,7 @@ partial class SpiderForm
         ClientSize = new Size(1534, 736);
         Margin = new Padding(3, 4, 3, 4);
         Name = "SpiderForm";
-        Text = "Form1";
+        Text = "Solitario Spider";
         Load += Form1_Load;
         ResumeLayout(false);
     }
