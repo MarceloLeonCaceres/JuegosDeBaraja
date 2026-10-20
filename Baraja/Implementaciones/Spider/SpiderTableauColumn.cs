@@ -4,14 +4,12 @@ using Baraja.Interfaces;
 using System.Collections.Generic;
 using System.Linq;
 
-public class SpiderTableauColumn(string id) : ICardContainer
+public class SpiderTableauColumn(string id) : CardStack(id), ICardContainer
 {
     private readonly List<PlayableCard> _cards = [];
 
     public string Id => id;
-    public IReadOnlyList<PlayableCard> Cards => _cards.AsReadOnly();
-
-    IReadOnlyList<PlayableCard> ICardContainer.Cards => throw new NotImplementedException();
+    public IReadOnlyList<PlayableCard> Cards => _cards.AsReadOnly();   
 
     public Result<bool> CanReceive(IEnumerable<PlayableCard> incomingCards)
     {

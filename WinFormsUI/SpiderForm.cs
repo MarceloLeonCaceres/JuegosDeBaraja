@@ -194,7 +194,7 @@ public partial class SpiderForm : Form
 
     private void Card_MouseUp(object sender, MouseEventArgs e)
     {
-        if (_draggedPbs.Count == 0 || _isAnimating) return; // Protección
+        if (_draggedPbs.Count == 0 || _isAnimating) return;
 
         var targetPb = _draggedPbs.First();
         var destinationColumn = GetColumnUnderMouse(targetPb);
@@ -202,29 +202,32 @@ public partial class SpiderForm : Form
         if (destinationColumn != null && destinationColumn != _sourceColumn)
         {
             var cardsToMove = _draggedPbs.Select(pb => _pbToCard[pb]).ToList();
-            var moveCommand = new SpiderMoveCommand(cardsToMove, _sourceColumn, destinationColumn, _gameTable.Foundations);
+            var moveCommand = new SpiderMoveCommand(cardsToMove, _sourceColumn, destinationColumn);
+            var macro = new SpiderMacroCommand();
 
-            if (_gameManager.TryExecuteMove(moveCommand).IsSuccess)
+            // 1. Ejecutar el movimiento físico primero
+            var result = moveCommand.Execute();
+            if (result.IsSuccess)
             {
+                macro.AddCommand(moveCommand);
                 _draggedPbs.Clear();
                 _sourceColumn = null;
-
-                // 1. Renderizamos la carta soltada en su nuevo destino
                 RenderBoard();
 
-                // 2. Evaluamos si completó un palo e iniciamos la animación
-                CheckAndAnimateCompletedSuits(() =>
+                // 2. Evaluar y animar (le pasamos el macro en curso)
+                CheckAndAnimateCompletedSuits(macro, () =>
                 {
-                    RenderBoard(); // Redibujar tras sacar el palo completado
-                    UpdateStatusBar(); // Actualizar movimientos si hubo un intento
+                    // 3. Guardar el bloque entero en el historial como 1 solo paso
+                    _gameManager.TryExecuteMove(macro);
+                    UpdateStatusBar();
+                    RenderBoard();
                     CheckForVictory();
                 });
 
-                return; // Fin anticipado porque la animación maneja el final
+                return;
             }
         }
 
-        // Si el movimiento fue inválido, limpiar y renderizar normal
         _draggedPbs.Clear();
         _sourceColumn = null;
         RenderBoard();
@@ -320,10 +323,13 @@ public partial class SpiderForm : Form
         if (_isAnimating || _gameTable.IsGameWon) return;
 
         var dealCommand = new SpiderDealCommand(_gameTable, _dealer);
-        var result = _gameManager.TryExecuteMove(dealCommand);
-
+        var macro = new SpiderMacroCommand();
+        
+        var result = dealCommand.Execute();
         if (result.IsSuccess)
         {
+            macro.AddCommand(dealCommand);
+
             var animations = new List<(PictureBox, Point, Point)>();
             var tempPbs = new List<PictureBox>();
 
@@ -371,10 +377,11 @@ public partial class SpiderForm : Form
                 RenderBoard();
 
                 // Revisamos si esto provocó completar un palo y animamos
-                CheckAndAnimateCompletedSuits(() =>
+                CheckAndAnimateCompletedSuits(macro, () =>
                 {
-                    RenderBoard();
+                    _gameManager.TryExecuteMove(macro);
                     UpdateStatusBar();
+                    RenderBoard();
                     CheckForVictory();
                 });
             });
@@ -594,9 +601,8 @@ public partial class SpiderForm : Form
         };
         timer.Start();
     }
-    private void CheckAndAnimateCompletedSuits(Action onAllComplete)
+    private void CheckAndAnimateCompletedSuits(SpiderMacroCommand macro, Action onAllComplete)
     {
-        // Ver si hay alguna columna con palo completado
         var columnsToAnimate = _gameTable.Columns.Where(c => c.HasCompletedSuitRun()).ToList();
 
         if (columnsToAnimate.Count == 0)
@@ -606,36 +612,35 @@ public partial class SpiderForm : Form
         }
 
         var animations = new List<(PictureBox, Point, Point)>();
-
-        // Buscar en qué casillero vacío de la fundación va a aterrizar
         int emptyFoundationIndex = _gameTable.Foundations.ToList().FindIndex(f => f.Cards.Count == 0);
 
         foreach (var col in columnsToAnimate)
         {
-            // Tomar las últimas 13 cartas físicas de la pantalla
             var pbsToAnimate = _pbToColumn.Where(kvp => kvp.Value == col)
                                           .OrderBy(kvp => kvp.Key.Top)
                                           .Select(kvp => kvp.Key)
-                                          .TakeLast(13)
-                                          .ToList();
+                                          .TakeLast(13).ToList();
 
             int targetX = FoundationStartX + (emptyFoundationIndex * FoundationSpacing);
             int targetY = FoundationStartY;
 
             foreach (var pb in pbsToAnimate)
             {
-                pb.BringToFront(); // Crucial: que vuelen por encima de todo
+                pb.BringToFront();
                 animations.Add((pb, pb.Location, new Point(targetX, targetY)));
             }
-
             emptyFoundationIndex++;
         }
 
-        // Iniciar animación hacia la fundación
         AnimateCards(animations, () =>
         {
-            // Cuando terminan de volar, aplicamos la lógica al núcleo
-            _gameTable.CheckAndMoveCompletedSuits();
+            // 1. Ejecutamos la lógica en el núcleo
+            var completeCmd = new SpiderCompleteSuitCommand(_gameTable);
+            completeCmd.Execute();
+
+            // 2. Lo añadimos a la transacción
+            macro.AddCommand(completeCmd);
+
             onAllComplete?.Invoke();
         });
     }

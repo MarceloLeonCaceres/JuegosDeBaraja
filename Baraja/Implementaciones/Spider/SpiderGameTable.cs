@@ -60,39 +60,6 @@ public class SpiderGameTable
         return Result<bool>.Success(true);
     }
 
-    /// <summary>
-    /// Escanea el tablero, mueve los palos completos a las fundaciones 
-    /// y voltea la carta que queda expuesta.
-    /// </summary>
-    public Result<int> CheckAndMoveCompletedSuits()
-    {
-        int suitsCompletedThisTurn = 0;
-
-        foreach (var column in Columns)
-        {
-            if (column.HasCompletedSuitRun())
-            {
-                // 1. Extraer la secuencia completa K-A (13 cartas)
-                var completedSuit = column.Pop(13).ToList();
-
-                // 2. Mover a la primera fundación vacía disponible
-                var emptyFoundation = Foundations.First(f => f.Cards.Count == 0);
-                emptyFoundation.Push(completedSuit);
-
-                // 3. Regla de Solitario: Voltear la nueva carta en la cima de la columna si está tapada
-                if (column.Cards.Count > 0 && !column.Cards.Last().IsFaceUp)
-                {
-                    var topCard = column.Pop(1).First();
-                    column.Push([topCard.Flip()]); // C# 12 collection expression
-                }
-
-                suitsCompletedThisTurn++;
-            }
-        }
-
-        return Result<int>.Success(suitsCompletedThisTurn);
-    }
-
     // Método de victoria rápida
     public bool IsGameWon => Foundations.All(f => f.Cards.Count == 13);
 }

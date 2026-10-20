@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Baraja.Implementaciones.Spider;
 
-public class SpiderFoundation(string id) : ICardContainer
+public class SpiderFoundation(string id) : CardStack(id), ICardContainer
 {
     private readonly List<PlayableCard> _cards = [];
 
@@ -18,5 +18,10 @@ public class SpiderFoundation(string id) : ICardContainer
 
     public void Push(IEnumerable<PlayableCard> cards) => _cards.AddRange(cards);
 
-    public IEnumerable<PlayableCard> Pop(int count) => [];
+    public IEnumerable<PlayableCard> Pop(int count)
+    {
+        var extracted = _cards.TakeLast(count).ToList();
+        _cards.RemoveRange(_cards.Count - extracted.Count, extracted.Count);
+        return extracted;
+    }
 }
