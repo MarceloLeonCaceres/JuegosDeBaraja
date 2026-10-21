@@ -21,6 +21,39 @@ public static partial class CardImageGenerator
         private static readonly string[] Symbols = { "♥", "♠", "♣", "♦" };
         private static readonly string[] RankChars = { "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
 
+        /// <summary>
+        /// Describe un tema visual. SuitColors sigue el orden de <see cref="Suits"/>:
+        /// Hearts, Spades, Clubs, Diamonds.
+        /// </summary>
+        private sealed record CardTheme(
+            string FileSuffix,
+            Color Background,
+            Color Border,
+            Color[] SuitColors,
+            Color BackBase,
+            Color BackPattern,
+            Color BackBorder);
+
+        private static readonly CardTheme[] Themes =
+        {
+        new(
+            FileSuffix: "",
+            Background: Color.White,
+            Border: Color.Black,
+            SuitColors: new[] { Color.Red, Color.Black, Color.Black, Color.Red },
+            BackBase: Color.RoyalBlue,
+            BackPattern: Color.LightBlue,
+            BackBorder: Color.Black),
+
+        new(
+            FileSuffix: "_Dark",
+            Background: Color.Black,
+            Border: Color.Gray,
+            SuitColors: new[] { Color.Red, Color.White, Color.MediumOrchid, Color.Yellow },
+            BackBase: Color.FromArgb(25, 25, 60),
+            BackPattern: Color.FromArgb(70, 70, 130),
+            BackBorder: Color.Gray)
+    };
         // Posiciones normalizadas (x: 0=izq, 0.5=centro, 1=der / y: 0=arriba, 1=abajo)
         private static readonly Dictionary<int, (float X, float Y)[]> PipLayouts = BuildPipLayouts();
 
@@ -51,31 +84,34 @@ public static partial class CardImageGenerator
         {
             Directory.CreateDirectory(outputFolder);
 
-            for (int s = 0; s < Suits.Length; s++)
+            foreach (var theme in Themes)
             {
-                for (int r = 0; r < Ranks.Length; r++)
+                for (int s = 0; s < Suits.Length; s++)
                 {
-                    using var bmp = DrawCard(s, r);
-                    bmp.Save(Path.Combine(outputFolder, $"{Suits[s]}_{Ranks[r]}.png"));
+                    for (int r = 0; r < Ranks.Length; r++)
+                    {
+                        using var bmp = DrawCard(theme, s, r);
+                        bmp.Save(Path.Combine(outputFolder, $"{Suits[s]}_{Ranks[r]}{theme.FileSuffix}.png"));
+                    }
                 }
-            }
 
-            using var back = DrawCardBack();
-            back.Save(Path.Combine(outputFolder, "CardBack.png"));
+                using var back = DrawCardBack(theme);
+                back.Save(Path.Combine(outputFolder, $"CardBack{theme.FileSuffix}.png"));
+            }
         }
 
-        private static Bitmap DrawCard(int suitIndex, int rankIndex)
+        private static Bitmap DrawCard(CardTheme theme, int suitIndex, int rankIndex)
         {
             var bmp = new Bitmap(Width, Height);
             using var g = Graphics.FromImage(bmp);
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
 
-            g.Clear(Color.White);
-            g.DrawRectangle(Pens.Black, 0, 0, Width - 1, Height - 1);
+            g.Clear(theme.Background);
+            using (var borderPen = new Pen(theme.Border))
+                g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
 
-            // Rojo para corazones/diamantes, negro para tréboles/picas
-            Brush brush = (suitIndex == 0 || suitIndex == 3) ? Brushes.Red : Brushes.Black;
+            using var brush = new SolidBrush(theme.SuitColors[suitIndex]);
             string symbol = Symbols[suitIndex];
             string rankChar = RankChars[rankIndex];
 
@@ -135,14 +171,16 @@ public static partial class CardImageGenerator
             g.DrawString(text, font, brush, cx, cy, format);
         }
 
-        private static Bitmap DrawCardBack()
+        private static Bitmap DrawCardBack(CardTheme theme)
         {
             var bmp = new Bitmap(Width, Height);
             using var g = Graphics.FromImage(bmp);
-            g.Clear(Color.RoyalBlue);
-            g.DrawRectangle(Pens.Black, 0, 0, Width - 1, Height - 1);
+            g.Clear(theme.BackBase);
 
-            using var hatch = new HatchBrush(HatchStyle.DiagonalCross, Color.LightBlue, Color.RoyalBlue);
+            using (var borderPen = new Pen(theme.BackBorder))
+                g.DrawRectangle(borderPen, 0, 0, Width - 1, Height - 1);
+
+            using var hatch = new HatchBrush(HatchStyle.DiagonalCross, theme.BackPattern, theme.BackBase);
             g.FillRectangle(hatch, 3, 3, Width - 7, Height - 7);
 
             return bmp;

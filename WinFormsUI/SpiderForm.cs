@@ -28,18 +28,18 @@ public partial class SpiderForm : Form
 
     private int BoardStartX;
     private int BoardStartY;
-    private  int CardWidth;
+    private int CardWidth;
     private int CardHeight;
     private int ColumnSpacing;
     private List<PictureBox> _hoveredPbs = new();
-    
+
     // Controles persistentes de las fundaciones
     private readonly List<PictureBox> _pbFoundations = new();
     // Constantes de diseño para las Fundaciones (Alineadas con el StockPile)
     private int FoundationStartX; // Separado del mazo
     private int FoundationStartY;
     private int FoundationSpacing;   // Espacio entre cada fundación
-                                                            
+
     // Bloquea la UI mientras hay cartas volando
     private bool _isAnimating = false;
     private GameDifficulty _currentDifficulty = GameDifficulty.Easy;
@@ -52,6 +52,8 @@ public partial class SpiderForm : Form
     // Cronómetro
     private System.Windows.Forms.Timer _gameTimer;
     private int _elapsedSeconds;
+    // Theme
+    private GameTheme _currentTheme = GameTheme.Light;
     public SpiderForm()
     {
         InitializeComponent();
@@ -90,7 +92,7 @@ public partial class SpiderForm : Form
         }
         _pbToCard.Clear();
         _pbToColumn.Clear();
-        
+
         RenderStockPile();
         RenderFoundations();
 
@@ -142,41 +144,47 @@ public partial class SpiderForm : Form
 
     private Image GetCardImage(PlayableCard card)
     {
-        // 1. Si está tapada, devolvemos el dorso (esto ya te funciona)
-        if (!card.IsFaceUp) return Properties.Resources.CardBack;
+        string themeSuffix = _currentTheme == GameTheme.Dark ? "_Dark" : "";
 
-        // 2. Buscamos la carta descubierta (Ej: "Spades_Ace", "Hearts_10")
-        string resourceName = $"{card.Card.Suit}_{card.Card.Rank}";
-        var image = (Image)Properties.Resources.ResourceManager.GetObject(resourceName);
-
-        // 3. Si la imagen no existe en tus recursos, dibujamos una temporal
-        if (image == null)
+        // 1. Dorso de la carta
+        if (!card.IsFaceUp)
         {
-            return CreateFallbackCardImage(resourceName);
+            var backImage = Properties.Resources.ResourceManager.GetObject($"CardBack{themeSuffix}");
+            return (Image)backImage ?? Properties.Resources.CardBack;
         }
 
+        // 2. Carta descubierta
+        string resourceName = $"{card.Card.Suit}_{card.Card.Rank}{themeSuffix}";
+        var image = (Image)Properties.Resources.ResourceManager.GetObject(resourceName);
+
+        if (image == null) return CreateFallbackCardImage(resourceName);
         return image;
     }
 
     // Método salvavidas: Dibuja una carta en blanco con el nombre escrito
     private Image CreateFallbackCardImage(string cardName)
     {
-        var bmp = new Bitmap(71, 96); // Usa tus constantes CardWidth y CardHeight si las tienes
+        var bmp = new Bitmap(CardWidth > 0 ? CardWidth : 71, CardHeight > 0 ? CardHeight : 96);
         using var g = Graphics.FromImage(bmp);
 
-        // Fondo blanco y borde negro
-        g.Clear(Color.White);
-        g.DrawRectangle(Pens.Black, 0, 0, 70, 95);
+        // Seleccionar colores según el tema
+        Color bgColor = _currentTheme == GameTheme.Dark ? Color.FromArgb(60, 60, 60) : Color.White;
+        Color textColor = _currentTheme == GameTheme.Dark ? Color.White : Color.Black;
+        Pen borderPen = _currentTheme == GameTheme.Dark ? Pens.Gray : Pens.Black;
 
-        // Escribimos el nombre de la carta que falta
+        // Dibujar fondo y borde
+        g.Clear(bgColor);
+        g.DrawRectangle(borderPen, 0, 0, bmp.Width - 1, bmp.Height - 1);
+
+        // Escribir el nombre de la carta
         var font = new Font("Segoe UI", 9, FontStyle.Bold);
-        var rect = new RectangleF(5, 30, 60, 40);
+        var rect = new RectangleF(5, 30, bmp.Width - 10, 40);
 
-        g.DrawString(cardName, font, Brushes.Black, rect);
+        g.DrawString(cardName, font, new SolidBrush(textColor), rect);
 
         return bmp;
     }
-    
+
     private void Card_MouseMove(object sender, MouseEventArgs e)
     {
         if (_draggedPbs.Count == 0) return;
@@ -324,7 +332,7 @@ public partial class SpiderForm : Form
 
         var dealCommand = new SpiderDealCommand(_gameTable, _dealer);
         var macro = new SpiderMacroCommand();
-        
+
         var result = dealCommand.Execute();
         if (result.IsSuccess)
         {
@@ -684,7 +692,8 @@ public partial class SpiderForm : Form
         var gameMenu = new ToolStripMenuItem("Juego");
 
         var restartMenuItem = new ToolStripMenuItem("Reiniciar Partida (Misma Baraja)");
-        restartMenuItem.Click += (s, e) => {
+        restartMenuItem.Click += (s, e) =>
+        {
             if (ConfirmRestart()) StartGameWithSeed(_currentDifficulty, _currentSeed);
         };
 
@@ -717,6 +726,14 @@ public partial class SpiderForm : Form
         gameMenu.DropDownItems.Add(restartMenuItem);
 
         menuStrip.Items.Add(gameMenu);
+
+        var viewMenu = new ToolStripMenuItem("Vista");
+        var lightThemeMenu = new ToolStripMenuItem("Tema Claro", null, (s, e) => ApplyTheme(GameTheme.Light));
+        var darkThemeMenu = new ToolStripMenuItem("Tema Oscuro", null, (s, e) => ApplyTheme(GameTheme.Dark));
+
+        viewMenu.DropDownItems.Add(lightThemeMenu);
+        viewMenu.DropDownItems.Add(darkThemeMenu);
+        menuStrip.Items.Add(viewMenu);
 
         this.MainMenuStrip = menuStrip;
         this.Controls.Add(menuStrip);
@@ -820,5 +837,25 @@ public partial class SpiderForm : Form
     {
         int moves = _gameManager?.MoveCount ?? 0;
         _lblMoves.Text = $"Movimientos: {moves}";
+    }
+    private void ApplyTheme(GameTheme theme)
+    {
+        _currentTheme = theme;
+
+        // Colores de fondo y texto
+        this.BackColor = theme == GameTheme.Dark ? Color.FromArgb(40, 40, 40) : SystemColors.Control;
+        _statusStrip.BackColor = theme == GameTheme.Dark ? Color.FromArgb(25, 25, 25) : Color.WhiteSmoke;
+    
+    Color textColor = theme == GameTheme.Dark ? Color.White : Color.Black;
+        _lblMoves.ForeColor = textColor;
+        _lblTime.ForeColor = textColor;
+
+        if (_lblStockCount != null)
+        {
+            _lblStockCount.ForeColor = textColor;
+        }
+
+        // Fuerza el redibujado para actualizar las imágenes de las cartas
+        if (_gameTable != null) RenderBoard();
     }
 }
