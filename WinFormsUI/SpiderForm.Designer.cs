@@ -28,6 +28,7 @@ partial class SpiderForm
     /// </summary>
     private void InitializeComponent()
     {
+        System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SpiderForm));
         SuspendLayout();
         // 
         // SpiderForm
@@ -36,6 +37,7 @@ partial class SpiderForm
         AutoScaleMode = AutoScaleMode.Font;
         BackColor = Color.DarkOliveGreen;
         ClientSize = new Size(1534, 736);
+        Icon = (Icon)resources.GetObject("$this.Icon");
         Margin = new Padding(3, 4, 3, 4);
         Name = "SpiderForm";
         Text = "Solitario Spider";
