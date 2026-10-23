@@ -53,7 +53,7 @@ public partial class SpiderForm : Form
     private System.Windows.Forms.Timer _gameTimer;
     private int _elapsedSeconds;
     // Theme
-    private GameTheme _currentTheme = GameTheme.Light;
+    private GameTheme _currentTheme = GameTheme.Dark;
     public SpiderForm()
     {
         InitializeComponent();
@@ -75,8 +75,8 @@ public partial class SpiderForm : Form
         InitializeMenu();
         InitializeStatusBar();
 
-        // Empezar por defecto en Fácil
-        StartBrandNewGame(GameDifficulty.Easy);
+        // Empezar por defecto en Personalizado
+        StartBrandNewGame(GameDifficulty.Personalizado);
     }
     private void Form1_Load(object sender, EventArgs e)
     {
@@ -711,6 +711,11 @@ public partial class SpiderForm : Form
             if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Medium);
         };
 
+        var personalizadoMenu = new ToolStripMenuItem("Personalizado (sorpresa!)");
+        personalizadoMenu.Click += (s, e) =>
+        {
+            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Personalizado);
+        };
         var hardMenu = new ToolStripMenuItem("Difícil (4 Palos)");
         hardMenu.Click += (s, e) =>
         {
@@ -719,6 +724,7 @@ public partial class SpiderForm : Form
 
         newGameMenu.DropDownItems.Add(easyMenu);
         newGameMenu.DropDownItems.Add(mediumMenu);
+        newGameMenu.DropDownItems.Add(personalizadoMenu);
         newGameMenu.DropDownItems.Add(hardMenu);
 
         gameMenu.DropDownItems.Add(newGameMenu);
@@ -727,9 +733,9 @@ public partial class SpiderForm : Form
 
         menuStrip.Items.Add(gameMenu);
 
-        var viewMenu = new ToolStripMenuItem("Vista");
-        var lightThemeMenu = new ToolStripMenuItem("Tema Claro", null, (s, e) => ApplyTheme(GameTheme.Light));
-        var darkThemeMenu = new ToolStripMenuItem("Tema Oscuro", null, (s, e) => ApplyTheme(GameTheme.Dark));
+        var viewMenu = new ToolStripMenuItem("Vista (Tema)");
+        var lightThemeMenu = new ToolStripMenuItem("Claro", null, (s, e) => ApplyTheme(GameTheme.Light));
+        var darkThemeMenu = new ToolStripMenuItem("Oscuro", null, (s, e) => ApplyTheme(GameTheme.Dark));
 
         viewMenu.DropDownItems.Add(lightThemeMenu);
         viewMenu.DropDownItems.Add(darkThemeMenu);
@@ -755,6 +761,7 @@ public partial class SpiderForm : Form
         {
             GameDifficulty.Easy => SpiderDeckFactory.CreateOneSuit(),
             GameDifficulty.Medium => SpiderDeckFactory.CreateTwoSuits(),
+            GameDifficulty.Personalizado => SpiderDeckFactory.CreatePersonalizado(),
             GameDifficulty.Hard => SpiderDeckFactory.CreateFourSuits(),
             _ => SpiderDeckFactory.CreateOneSuit()
         };

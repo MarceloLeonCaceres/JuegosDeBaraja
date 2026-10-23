@@ -41,6 +41,7 @@ partial class SpiderForm
         Margin = new Padding(3, 4, 3, 4);
         Name = "SpiderForm";
         Text = "Solitario Spider";
+        WindowState = FormWindowState.Maximized;
         Load += Form1_Load;
         ResumeLayout(false);
     }

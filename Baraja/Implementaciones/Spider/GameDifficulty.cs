@@ -8,5 +8,6 @@ public enum GameDifficulty
 {
     Easy,
     Medium,
+    Personalizado,
     Hard
 }
