@@ -848,7 +848,12 @@ public partial class SpiderForm : Form
     }
     private void InitializeStatusBar()
     {
-        _statusStrip = new StatusStrip();
+        _statusStrip = new StatusStrip
+        {
+            Dock = DockStyle.Bottom,
+            Visible = true,
+            SizingGrip = false
+        };
         _statusStrip.BackColor = Color.WhiteSmoke;
 
         _lblMoves = new ToolStripStatusLabel("Movimientos: 0");
@@ -869,6 +874,7 @@ public partial class SpiderForm : Form
         // Configurar el reloj (1000 ms = 1 segundo)
         _gameTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         _gameTimer.Tick += GameTimer_Tick;
+        _statusStrip.BringToFront();
     }
 
     private void GameTimer_Tick(object? sender, EventArgs e)
@@ -886,7 +892,7 @@ public partial class SpiderForm : Form
     private void UpdateStatusBar()
     {
         int moves = _gameManager?.MoveCount ?? 0;
-        _lblMoves.Text = $"Movimientos: {moves}";
+        _lblMoves.Text = $"Movimientos: {moves}";        
     }
     private void ApplyTheme(GameTheme theme)
     {
