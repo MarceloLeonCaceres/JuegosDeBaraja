@@ -39,5 +39,5 @@ public static class SpiderDeckFactory
     public static IDeck CreateFourSuits() =>
         new MultiDeck(2, Enum.GetValues<Suit>()); // 104 cartas: 2 barajas estándar
     public static IDeck CreatePersonalizado() =>
-        new MultiDeck(1, Enum.GetValues<Suit>().Append(Suit.Spades).Append(Suit.Spades).Append(Suit.Spades).Append(Suit.Spades));
+        new MultiDeck(1, [Suit.Spades, Suit.Hearts, Suit.Spades, Suit.Hearts, Suit.Spades, Suit.Hearts, Suit.Clubs, Suit.Diamonds]);
 }

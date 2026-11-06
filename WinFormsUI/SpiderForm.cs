@@ -788,7 +788,7 @@ public partial class SpiderForm : Form
     private bool ConfirmRestart()
     {
         // Si el juego aún no ha cargado o ya se ganó, no hay progreso que perder
-        if (_gameTable == null || _gameTable.IsGameWon)
+        if (_gameTable == null || _gameTable.IsGameWon || _gameManager.MoveCount == 0)
         {
             return true;
         }
