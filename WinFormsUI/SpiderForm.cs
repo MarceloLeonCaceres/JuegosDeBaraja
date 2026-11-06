@@ -689,60 +689,103 @@ public partial class SpiderForm : Form
     private void InitializeMenu()
     {
         var menuStrip = new MenuStrip();
-        var gameMenu = new ToolStripMenuItem("Juego");
 
-        var restartMenuItem = new ToolStripMenuItem("Reiniciar Partida (Misma Baraja)");
+        menuStrip.Items.Add(CreateGameMenu());
+        menuStrip.Items.Add(CreateViewMenu());
+        menuStrip.Items.Add(CreateJuegoDefaultMenuItem());
+
+        MainMenuStrip = menuStrip;
+        Controls.Add(menuStrip);
+    }
+
+    private ToolStripMenuItem CreateGameMenu()
+    {
+        var gameMenu = new ToolStripMenuItem("Elegir Partida");
+
+        gameMenu.DropDownItems.Add(CreateNewGameMenu());
+        gameMenu.DropDownItems.Add(new ToolStripSeparator());
+        gameMenu.DropDownItems.Add(CreateRestartMenuItem());
+
+        return gameMenu;
+    }
+
+    private ToolStripMenuItem CreateNewGameMenu()
+    {
+        var newGameMenu = new ToolStripMenuItem("Dificultad...");
+
+        newGameMenu.DropDownItems.Add(
+            CreateDifficultyMenuItem("Fácil (1 Palo - Picas)", GameDifficulty.Easy));
+
+        newGameMenu.DropDownItems.Add(
+            CreateDifficultyMenuItem("Medio (2 Palos - Picas y Corazones)", GameDifficulty.Medium));
+
+        newGameMenu.DropDownItems.Add(
+            CreateDifficultyMenuItem("Personalizado (sorpresa!)", GameDifficulty.Personalizado));
+
+        newGameMenu.DropDownItems.Add(
+            CreateDifficultyMenuItem("Difícil (4 Palos)", GameDifficulty.Hard));
+
+        return newGameMenu;
+    }
+
+    private ToolStripMenuItem CreateDifficultyMenuItem(
+        string text,
+        GameDifficulty difficulty)
+    {
+        var menuItem = new ToolStripMenuItem(text);
+
+        menuItem.Click += (s, e) =>
+        {
+            if (ConfirmRestart())
+                StartBrandNewGame(difficulty);
+        };
+
+        return menuItem;
+    }
+    private ToolStripMenuItem CreateJuegoDefaultMenuItem()
+    {
+        var menuItem = new ToolStripMenuItem("Nuevo Juego");
+
+        menuItem.Click += (s, e) =>
+        {
+            StartBrandNewGame(GameDifficulty.Medium);
+        };
+
+        return menuItem;
+    }
+
+    private ToolStripMenuItem CreateRestartMenuItem()
+    {
+        var restartMenuItem = new ToolStripMenuItem(
+            "Reiniciar Partida (Misma Baraja)");
+
         restartMenuItem.Click += (s, e) =>
         {
-            if (ConfirmRestart()) StartGameWithSeed(_currentDifficulty, _currentSeed);
+            if (ConfirmRestart())
+                StartGameWithSeed(_currentDifficulty, _currentSeed);
         };
 
-        var newGameMenu = new ToolStripMenuItem("Nuevo Juego...");
+        return restartMenuItem;
+    }
 
-        var easyMenu = new ToolStripMenuItem("Fácil (1 Palo - Picas)");
-        easyMenu.Click += (s, e) =>
-        {
-            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Easy);
-        };
-
-        var mediumMenu = new ToolStripMenuItem("Medio (2 Palos - Picas y Corazones)");
-        mediumMenu.Click += (s, e) =>
-        {
-            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Medium);
-        };
-
-        var personalizadoMenu = new ToolStripMenuItem("Personalizado (sorpresa!)");
-        personalizadoMenu.Click += (s, e) =>
-        {
-            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Personalizado);
-        };
-        var hardMenu = new ToolStripMenuItem("Difícil (4 Palos)");
-        hardMenu.Click += (s, e) =>
-        {
-            if (ConfirmRestart()) StartBrandNewGame(GameDifficulty.Hard);
-        };
-
-        newGameMenu.DropDownItems.Add(easyMenu);
-        newGameMenu.DropDownItems.Add(mediumMenu);
-        newGameMenu.DropDownItems.Add(personalizadoMenu);
-        newGameMenu.DropDownItems.Add(hardMenu);
-
-        gameMenu.DropDownItems.Add(newGameMenu);
-        gameMenu.DropDownItems.Add(new ToolStripSeparator());
-        gameMenu.DropDownItems.Add(restartMenuItem);
-
-        menuStrip.Items.Add(gameMenu);
-
+    private ToolStripMenuItem CreateViewMenu()
+    {
         var viewMenu = new ToolStripMenuItem("Vista (Tema)");
-        var lightThemeMenu = new ToolStripMenuItem("Claro", null, (s, e) => ApplyTheme(GameTheme.Light));
-        var darkThemeMenu = new ToolStripMenuItem("Oscuro", null, (s, e) => ApplyTheme(GameTheme.Dark));
 
-        viewMenu.DropDownItems.Add(lightThemeMenu);
-        viewMenu.DropDownItems.Add(darkThemeMenu);
-        menuStrip.Items.Add(viewMenu);
+        viewMenu.DropDownItems.Add(
+            CreateThemeMenuItem("Claro", GameTheme.Light));
 
-        this.MainMenuStrip = menuStrip;
-        this.Controls.Add(menuStrip);
+        viewMenu.DropDownItems.Add(
+            CreateThemeMenuItem("Oscuro", GameTheme.Dark));
+
+        return viewMenu;
+    }
+
+    private ToolStripMenuItem CreateThemeMenuItem(
+        string text,
+        GameTheme theme)
+    {
+        return new ToolStripMenuItem(text, null, (s, e) => ApplyTheme(theme));
     }
     private void StartBrandNewGame(GameDifficulty difficulty)
     {
